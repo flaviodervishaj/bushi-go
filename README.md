@@ -1,13 +1,36 @@
-Bushi-Go: The War Room for Professional Correspondence
+ ⚔️ Bushi-Go: The Tactical Communication Forge
 
-Bushi-Go is a tactical interface designed to strip emotion from raw manuscripts and forge them into precise, professional instruments. Whether you are navigating high-level diplomacy or require lethal clarity in a brief, this tool provides the discipline your communication lacks.
+**Bushi-Go** is a professional communication refiner designed to strip emotion from raw manuscripts and forge them into precise, disciplined instruments. Built for the modern professional, it applies the "Way of the Warrior" to corporate correspondence.
 
-The Stances:
 
-Shogun Stance (The Long Game): High-honor diplomacy. Converts frustration into unshakeable professional authority.
 
-Ninja Stance (The Double-Strike): Maximum efficiency. Delivers the core message and the required command in exactly two sentences.
+🛡️ The Three Stances
 
-Katana Stance (The Cold Edge): Sharp professional truth. Uses clinical logic to strike when respect has been ignored.
+Choose your tactical approach based on the objective:
 
-The Forge Stats: Every transformation is measured by Honor and Stealth metrics, ensuring your "Forged Steel" aligns with the intended tactical protocol before you strike the send key.
+* **Shogun Stance:** High-level diplomacy. Transforms frustration into unshakeable professional authority. (High Honor)
+* **Ninja Stance:** Maximum efficiency. Delivers the core message and command in exactly two sentences. (High Stealth)
+* **Katana Stance:** Sharp professional truth. Clinical logic for when respect has been ignored. (Lethal Clarity)
+
+🚀 Live Demo
+Visit the Dojo here: https://flaviodervishaj.github.io/bushi-go/
+
+🛠️ Technical Architecture
+This project is built using a decoupled architecture:
+* **Frontend:** Vanilla JS / Tailwind CSS (Hosted on GitHub Pages)
+* **Backend:** FastAPI / Python (Hosted on Render)
+* **Logic:** Custom prompting engine utilizing the Phi-4 model.
+
+
+
+🛠️ Installation & Local Setup
+
+1. **Clone the repository:**
+   ```bash
+   git clone [https://github.com/flaviodervishaj/bushi-go.git](https://github.com/flaviodervishaj/bushi-go.git)
+2. **Install dependencies:**
+   pip install -r requirements.txt
+3. **Configure Environment:**
+   Create a .env file and add your BUSHIGO_TOKEN
+4. **Run**:
+   python main.py
