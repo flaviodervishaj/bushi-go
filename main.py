@@ -2,6 +2,7 @@ import json
 import uvicorn
 import requests
 import os
+import re
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -21,8 +22,6 @@ app.add_middleware(
 )
 
 # --- CONFIGURATION ---
-# This looks for a variable named 'BUSHIGO_TOKEN' in your server settings
-# When you host on Render/Railway, you will paste your token there.
 GITHUB_TOKEN = os.getenv("BUSHIGO_TOKEN")
 ENDPOINT = "https://models.inference.ai.azure.com/chat/completions"
 MODEL_NAME = "Phi-4"
@@ -40,23 +39,24 @@ async def analyze_email(request: EmailRequest):
             "honor": 0, "stealth": 0
         }
 
+    # Refined Stances: Samurai Spirit, Professional Output
     stances = {
         "professional": (
-            "STANCE: SHOGUN. Tone: High Diplomacy. "
-            "Rule: Use 'Esteemed' or 'Respectfully.' Transform all complaints into requests for excellence. "
-            "Honor: 95, Stealth: 20."
+            "Persona: The Shogun. Tone: High Executive Diplomacy. "
+            "Instruction: Use sophisticated, respectful language. Transform frustration into an authoritative request for excellence. "
+            "Constraint: No heavy warrior jargon in the output. Keep it office-safe. "
+            "Honor: 95, Stealth: 25."
         ),
         "short": (
-            "STANCE: NINJA. Tone: Tactical Brevity. "
-            "Rule: Maximum TWO sentences. No greetings. No sign-offs. "
-            "Structure: Sentence 1 identifies the issue. Sentence 2 gives the order. "
-            "Honor: 40, Stealth: 98."
+            "Persona: The Ninja. Tone: Tactical Brevity. "
+            "Instruction: Maximum TWO sentences. Eliminate all greetings, pleasantries, and sign-offs. Focus strictly on action. "
+            "Honor: 45, Stealth: 98."
         ),
         "vibe": (
-            "STANCE: KATANA. Tone: Aggressive Professionalism. "
-            "Rule: Use 'As per my previous' or 'I trust this is clear.' "
-            "Subtext: Your patience has reached its limit. "
-            "Honor: 10, Stealth: 75."
+            "Persona: The Katana. Tone: Assertive Professionalism. "
+            "Instruction: Be sharp and direct. Use phrases like 'As per my previous' or 'I trust this clarifies.' "
+            "Subtext: Professional patience has reached its limit. "
+            "Honor: 15, Stealth: 80."
         )
     }
     
@@ -67,9 +67,10 @@ async def analyze_email(request: EmailRequest):
             {
                 "role": "system",
                 "content": (
-                    "You are a Samurai Master. Rewrite the input text. "
-                    f"Instruction: {selected_rule}. "
-                    "Respond ONLY with a JSON object: "
+                    "You are a master of communication with a disciplined Samurai philosophy. "
+                    f"STANCE SETTINGS: {selected_rule}. "
+                    "Rewrite the user's input. The result must be professional and ready to send in a corporate environment. "
+                    "Respond ONLY with a valid JSON object: "
                     "{ \"refined_text\": \"string\", \"honor\": int, \"stealth\": int }"
                 )
             },
@@ -89,19 +90,23 @@ async def analyze_email(request: EmailRequest):
         response = requests.post(ENDPOINT, headers=headers, json=payload)
         response.raise_for_status()
         
-        content = response.json()["choices"][0]["message"]["content"]
-        clean_json = content.replace("```json", "").replace("```", "").strip()
+        raw_content = response.json()["choices"][0]["message"]["content"]
         
-        return json.loads(clean_json)
+        # Robust JSON cleaning: Finds the first '{' and last '}' to ignore extra AI chatter
+        json_match = re.search(r'\{.*\}', raw_content, re.DOTALL)
+        if json_match:
+            clean_json = json_match.group(0)
+            return json.loads(clean_json)
+        else:
+            raise ValueError("No valid JSON found in response")
 
     except Exception as e:
         print(f"FORGE ERROR: {e}")
         return {
-            "refined_text": "THE BLADE HAS SHATTERED. RE-LINK THE FORGE.",
+            "refined_text": "THE BLADE HAS SHATTERED. THE FORGE IS DISCONNECTED.",
             "honor": 0, "stealth": 0
         }
 
 if __name__ == "__main__":
-    # The host '0.0.0.0' is required for cloud hosting services
     port = int(os.getenv("PORT", 8000))
     uvicorn.run(app, host="0.0.0.0", port=port)
