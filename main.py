@@ -3,7 +3,8 @@ import uvicorn
 import requests
 import os
 import re
-from fastapi import FastAPI
+import time
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from dotenv import load_dotenv
@@ -26,12 +27,36 @@ GITHUB_TOKEN = os.getenv("BUSHIGO_TOKEN")
 ENDPOINT = "https://models.inference.ai.azure.com/chat/completions"
 MODEL_NAME = "Phi-4"
 
+# --- RATE LIMIT STORAGE ---
+# Dictionary to store { "ip_address": [timestamp1, timestamp2, ...] }
+user_history = {}
+LIMIT_COUNT = 5
+LIMIT_WINDOW = 3 * 60 * 60  # 3 hours in seconds
+
 class EmailRequest(BaseModel):
     text: str
     mode: str
 
 @app.post("/analyze")
-async def analyze_email(request: EmailRequest):
+async def analyze_email(request_data: EmailRequest, request: Request):
+    # 1. Identify User by IP
+    client_ip = request.client.host
+    current_time = time.time()
+
+    # 2. Initialize or clean history for this IP
+    if client_ip not in user_history:
+        user_history[client_ip] = []
+    
+    # Remove timestamps older than the 3-hour window
+    user_history[client_ip] = [t for t in user_history[client_ip] if current_time - t < LIMIT_WINDOW]
+
+    # 3. Check Limit: If user has 5 strikes in last 3 hours, block them
+    if len(user_history[client_ip]) >= LIMIT_COUNT:
+        return {
+            "refined_text": "PATIENCE, BUSHI. You have reached the limit of 5 strikes per 3 hours. Your spirit must rest before the forge can be relit.",
+            "honor": 0, "stealth": 0
+        }
+
     # Check if token exists to prevent 401 errors
     if not GITHUB_TOKEN:
         return {
@@ -60,7 +85,7 @@ async def analyze_email(request: EmailRequest):
         )
     }
     
-    selected_rule = stances.get(request.mode, stances["professional"])
+    selected_rule = stances.get(request_data.mode, stances["professional"])
 
     payload = {
         "messages": [
@@ -74,7 +99,7 @@ async def analyze_email(request: EmailRequest):
                     "{ \"refined_text\": \"string\", \"honor\": int, \"stealth\": int }"
                 )
             },
-            {"role": "user", "content": request.text}
+            {"role": "user", "content": request_data.text}
         ],
         "model": MODEL_NAME,
         "temperature": 0.7,
@@ -96,6 +121,10 @@ async def analyze_email(request: EmailRequest):
         json_match = re.search(r'\{.*\}', raw_content, re.DOTALL)
         if json_match:
             clean_json = json_match.group(0)
+            
+            # LOG SUCCESSFUL STRIKE: Only count it if the API call succeeded
+            user_history[client_ip].append(current_time)
+            
             return json.loads(clean_json)
         else:
             raise ValueError("No valid JSON found in response")
